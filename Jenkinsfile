@@ -58,7 +58,49 @@ pipeline {
       }
     }
 
-   stage('Security Scans (SAST + SCA + IaC)') {
+ stage('Security Scans (SAST + SCA + IaC)') {
+  steps {
+    sh '''
+      set -euo pipefail
+
+      echo "== Prepare local tools directory =="
+      mkdir -p .tools/bin
+      export PATH="$PWD/.tools/bin:$PATH"
+
+      echo "== Install Trivy (Vuln/Secrets/IaC) =="
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .tools/bin
+      trivy --version
+
+      echo "== SCA: npm audit =="
+      npm ci
+      npm audit --audit-level=high || true
+
+      echo "== Setup isolated Python venv for Semgrep (avoids AWS CLI conflicts) =="
+      python3 -m venv .venv || true
+      . .venv/bin/activate
+
+      python3 -m ensurepip --upgrade || true
+      python3 -m pip install --upgrade pip setuptools wheel
+      python3 -m pip install --upgrade semgrep
+      semgrep --version
+
+      echo "== SAST: Semgrep scan =="
+      semgrep --config p/ci --error
+
+      deactivate || true
+
+      echo "== CDK Synth (for IaC output) =="
+      npx cdk synth
+
+      echo "== Trivy filesystem scan (repo) =="
+      trivy fs . --severity HIGH,CRITICAL --exit-code 1 --no-progress
+
+      echo "== Trivy IaC scan (cdk.out) =="
+      # FIX: trivy config does NOT support --no-progress in your version
+      trivy config --severity HIGH,CRITICAL --exit-code 1 --quiet cdk.out
+    '''
+  }
+}  stage('Security Scans (SAST + SCA + IaC)') {
   steps {
     sh '''
       set -euo pipefail
