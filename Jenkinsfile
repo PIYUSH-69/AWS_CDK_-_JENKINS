@@ -131,15 +131,6 @@ pipeline {
       }
     }
 
-    stage('Manual Approval (prod branch)') {
-      when { branch 'prod' }
-      agent none        // <--- THIS FIXES IT
-      steps {
-        timeout(time: 30, unit: 'MINUTES') {
-          input message: "Deploy to PROD?", ok: "Deploy"
-        }
-      }
-    }
 
     stage('Deploy Prod (prod branch)') {
       when { branch 'prod' }
