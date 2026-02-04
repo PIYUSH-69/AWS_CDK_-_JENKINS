@@ -133,8 +133,11 @@ pipeline {
 
     stage('Manual Approval (prod branch)') {
       when { branch 'prod' }
+      agent { label 'master' }   // or any node that accepts input
       steps {
-        input message: "Deploy to PROD?", ok: "Deploy"
+        script {
+          input message: "Deploy to PROD?", ok: "Deploy"
+        }
       }
     }
 
