@@ -5,7 +5,7 @@ pipeline {
     AWS_REGION = "ap-south-1"
     AWS_DEFAULT_REGION = "ap-south-1"
     CDK_DEFAULT_REGION = "ap-south-1"
-    CDK_DEFAULT_ACCOUNT = "706877673330"
+    CDK_DEFAULT_ACCOUNT = "706877 673330"
   }
 
   tools {
