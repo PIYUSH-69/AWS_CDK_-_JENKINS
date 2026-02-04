@@ -58,49 +58,55 @@ pipeline {
       }
     }
 
-    stage('Security Scans (SAST + SCA + IaC)') {
-      steps {
-        sh '''
-          set -euo pipefail
+   stage('Security Scans (SAST + SCA + IaC)') {
+  steps {
+    sh '''
+      set -euo pipefail
 
-          echo "== Prepare local tools directory =="
-          mkdir -p .tools/bin
-          export PATH="$PWD/.tools/bin:$PATH"
+      echo "== Prepare local tools directory =="
+      mkdir -p .tools/bin
+      export PATH="$PWD/.tools/bin:$PATH"
 
-          echo "== Install Semgrep (SAST) =="
-          python3 -m pip install --upgrade pip >/dev/null
-          pip3 install --upgrade semgrep >/dev/null
-          semgrep --version
+      echo "== Ensure pip is available =="
+      # Try ensurepip first (works if python is built with it)
+      python3 -m ensurepip --upgrade || true
 
-          echo "== Install Trivy (Vuln/Secrets/IaC) =="
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b .tools/bin
-          trivy --version
+      # If pip is still missing, bootstrap it using get-pip.py (no sudo required)
+      if ! python3 -m pip --version >/dev/null 2>&1; then
+        echo "pip not found. Bootstrapping pip via get-pip.py..."
+        curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+        python3 get-pip.py --user
+      fi
 
-          echo "== SCA: npm audit (set to fail or warn as you prefer) =="
-          # Option 1 (WARN only): do not fail build
-          npm audit --audit-level=high || true
-          # Option 2 (FAIL build): uncomment below and remove line above
-          # npm audit --audit-level=high
+      # Make sure user-installed scripts are on PATH (semgrep installs here)
+      export PATH="$HOME/.local/bin:$PATH"
 
-          echo "== SAST: Semgrep scan =="
-          # Fails the build if findings are detected (recommended gate)
-          semgrep --config p/ci --error
-          # If you only want reporting and not fail:
-          # semgrep --config p/ci || true
+      echo "== Install Semgrep (SAST) =="
+      python3 -m pip install --user --upgrade semgrep
+      semgrep --version
 
-          echo "== Trivy filesystem scan (repo) =="
-          trivy fs . --severity HIGH,CRITICAL --exit-code 1 --no-progress || true
-          # If you want Trivy FS to hard-fail build, remove "|| true"
+      echo "== Install Trivy (Vuln/Secrets/IaC) =="
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .tools/bin
+      trivy --version
 
-          echo "== CDK Synth (for IaC output) =="
-          npx cdk synth
+      echo "== SCA: npm audit =="
+      npm ci
+      npm audit --audit-level=high || true
 
-          echo "== Trivy IaC scan (cdk.out) =="
-          trivy config cdk.out --severity HIGH,CRITICAL --exit-code 1 --no-progress
-        '''
-      }
-    }
+      echo "== SAST: Semgrep scan =="
+      semgrep --config p/ci --error
+
+      echo "== CDK Synth (for IaC output) =="
+      npx cdk synth
+
+      echo "== Trivy filesystem scan (repo) =="
+      trivy fs . --severity HIGH,CRITICAL --exit-code 1 --no-progress || true
+
+      echo "== Trivy IaC scan (cdk.out) =="
+      trivy config cdk.out --severity HIGH,CRITICAL --exit-code 1 --no-progress
+    '''
+  }
+}
 
     // Optional: Keep this stage if you want synth separately (it will re-run synth).
     // If you keep it, remove "npx cdk synth" from Security Scans to avoid duplicate work.
