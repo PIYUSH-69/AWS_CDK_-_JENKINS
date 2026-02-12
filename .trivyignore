@@ -1,0 +1,2 @@
+# Ignore S3 bucket CMK encryption warning
+AWS-0132

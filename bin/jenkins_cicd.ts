@@ -4,7 +4,7 @@ import { ServicesStack } from '../lib/jenkins_cicd-stack';
 
 const app = new cdk.App();
 
-const account = process.env.CDK_DEFAULT_ACCOUNT || '706877673330';
+const account = '706877673330';
 const region = process.env.CDK_DEFAULT_REGION || 'ap-south-1';
 
 new ServicesStack(app, 'ServicesStack-Test', {
