@@ -1,6 +1,7 @@
 pipeline {
   agent any
 
+  //ci
   environment {
     AWS_REGION         = "ap-south-1"
     AWS_DEFAULT_REGION = "ap-south-1"
@@ -79,9 +80,16 @@ pipeline {
       python3 -m venv .venv || true
       . .venv/bin/activate
 
-      python3 -m ensurepip --upgrade || true
-      python3 -m pip install --upgrade pip setuptools wheel
-      python3 -m pip install --upgrade semgrep
+     python3 -m ensurepip --upgrade || true
+
+      # FIX: Install older setuptools so pkg_resources exists
+      pip install setuptools==68.0.0
+
+      # Continue normal installation
+      pip install --upgrade pip wheel
+      pip install semgrep
+
+      # Verify
       semgrep --version
 
       echo "== SAST: Semgrep scan =="
@@ -117,6 +125,8 @@ pipeline {
       }
     }
 
+
+    //cd
     stage('Deploy Test (test branch)') {
       when { branch 'test' }
       steps {
