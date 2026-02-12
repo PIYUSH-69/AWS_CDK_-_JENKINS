@@ -113,8 +113,7 @@ pipeline {
 
 
 
-    // Optional: Keep this stage if you want synth separately (it will re-run synth).
-    // If you keep it, remove "npx cdk synth" from Security Scans to avoid duplicate work.
+   
     stage('CDK Synth') {
       steps {
         sh '''
