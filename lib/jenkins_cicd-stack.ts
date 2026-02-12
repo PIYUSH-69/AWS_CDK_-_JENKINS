@@ -28,7 +28,7 @@ export class ServicesStack extends cdk.Stack {
 def lambda_handler(event, context):
     return {
         "statusCode": 200,
-        "body": "Hello from inline Lambda-2!"
+        "body": "Hello from inline Lambda-5!"
     }
 `),
       environment: {
